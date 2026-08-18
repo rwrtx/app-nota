@@ -3,6 +3,7 @@ package com.nota.app
 import android.annotation.SuppressLint
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
@@ -17,6 +18,7 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.io.File
 import java.io.FileOutputStream
@@ -31,14 +33,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Membuat tata letak utama dengan SwipeRefreshLayout
         swipeRefreshLayout = SwipeRefreshLayout(this)
         webView = WebView(this)
 
         swipeRefreshLayout.addView(webView)
         setContentView(swipeRefreshLayout)
 
-        // Konfigurasi WebSettings
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
@@ -47,11 +47,9 @@ class MainActivity : AppCompatActivity() {
         webSettings.useWideViewPort = true
         webSettings.loadWithOverviewMode = true
 
-        // Mengatur perilaku WebView
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
-                // Hentikan animasi putar refresh saat halaman selesai dimuat
                 swipeRefreshLayout.isRefreshing = false
             }
 
@@ -65,15 +63,12 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = WebChromeClient()
 
-        // Fitur Swipe to Refresh
         swipeRefreshLayout.setOnRefreshListener {
             webView.reload()
         }
 
-        // Menambahkan Interface Penanganan Unduhan PDF Blob
         webView.addJavascriptInterface(BlobDownloader(this), "AndroidBlobDownloader")
 
-        // Penanganan Unduhan File PDF
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
             if (url.startsWith("blob:")) {
                 val js = """
@@ -114,7 +109,6 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("https://nota.serviceacjakarta.my.id/")
     }
 
-    // Menambahkan Tombol Refresh pada Menu Atas (Opsional)
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menu?.add(0, 1, 0, "Refresh")?.setIcon(android.R.drawable.ic_menu_rotate)?.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         return super.onCreateOptionsMenu(menu)
@@ -129,7 +123,7 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    // Class Pengunduh Blob PDF
+    // Class Pengunduh & Pembuka Otomatis File PDF
     class BlobDownloader(private val context: Context) {
         @JavascriptInterface
         fun getBase64FromBlobData(base64Data: String, mimeType: String) {
@@ -147,7 +141,26 @@ class MainActivity : AppCompatActivity() {
                 os.close()
 
                 (context as AppCompatActivity).runOnUiThread {
-                    Toast.makeText(context, "PDF Berhasil Disimpan ke Folder Download!", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "PDF Berhasil Disimpan & Membuka PDF...", Toast.LENGTH_SHORT).show()
+
+                    // Buka file PDF secara otomatis
+                    try {
+                        val contentUri: Uri = FileProvider.getUriForFile(
+                            context,
+                            "${context.packageName}.provider",
+                            file
+                        )
+
+                        val openIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(contentUri, "application/pdf")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+
+                        context.startActivity(openIntent)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "File tersimpan di Download, namun gagal membuka viewer: ${e.message}", Toast.LENGTH_LONG).show()
+                    }
                 }
             } catch (e: Exception) {
                 (context as AppCompatActivity).runOnUiThread {
