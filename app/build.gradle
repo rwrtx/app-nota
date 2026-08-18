@@ -15,20 +15,15 @@ android {
         versionName "1.0"
     }
 
-    signingConfigs {
-        release {
-            // Menggunakan sertifikat resmi bawaan Android SDK untuk Release
-            storeFile file(android.buildTypes.release.signingConfig = debug.storeFile)
-            storePassword debug.storePassword
-            keyAlias debug.keyAlias
-            keyPassword debug.keyPassword
-        }
+    buildFeatures {
+        buildConfig true
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.release
+            // Trik utama: Gunakan kunci debug otomatis agar assembleRelease berhasil tanpa setup keystore rumit
+            signingConfig signingConfigs.debug
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
