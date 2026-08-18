@@ -93,7 +93,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.loadUrl("https://nota.serviceacjakarta.my.id/")
+        webView.loadUrl("https://serviceacjakarta.my.id/irfannota/notairfani.html")
     }
 
     // Class pembantu untuk mengonversi Blob Base64 ke File PDF fisik di folder Download
