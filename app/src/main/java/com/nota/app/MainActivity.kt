@@ -10,6 +10,7 @@ import android.os.Environment
 import android.util.Base64
 import android.view.Menu
 import android.view.MenuItem
+import android.view.ViewGroup
 import android.webkit.JavascriptInterface
 import android.webkit.URLUtil
 import android.webkit.WebChromeClient
@@ -33,19 +34,33 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // 1. Set Layout SwipeRefreshLayout agar mengisi seluruh layar (MATCH_PARENT)
         swipeRefreshLayout = SwipeRefreshLayout(this)
+        swipeRefreshLayout.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+
+        // 2. Set Layout WebView agar mengisi 100% kontainer
         webView = WebView(this)
+        webView.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
 
         swipeRefreshLayout.addView(webView)
         setContentView(swipeRefreshLayout)
 
+        // 3. Konfigurasi WebSettings agar Mobile-Friendly (Tidak Terpotong)
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
         webSettings.databaseEnabled = true
         webSettings.allowFileAccess = true
-        webSettings.useWideViewPort = true
-        webSettings.loadWithOverviewMode = true
+
+        // Matikan mode Wide ViewPort desktop agar halaman merender murni ukuran HP
+        webSettings.useWideViewPort = false
+        webSettings.loadWithOverviewMode = false
 
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
@@ -63,12 +78,15 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = WebChromeClient()
 
+        // Fitur Swipe to Refresh
         swipeRefreshLayout.setOnRefreshListener {
             webView.reload()
         }
 
+        // Interface untuk Blob PDF
         webView.addJavascriptInterface(BlobDownloader(this), "AndroidBlobDownloader")
 
+        // Listener Download File PDF
         webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
             if (url.startsWith("blob:")) {
                 val js = """
@@ -109,6 +127,7 @@ class MainActivity : AppCompatActivity() {
         webView.loadUrl("https://nota.serviceacjakarta.my.id/")
     }
 
+    // Tombol Refresh di Menu Atas
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menu?.add(0, 1, 0, "Refresh")?.setIcon(android.R.drawable.ic_menu_rotate)?.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
         return super.onCreateOptionsMenu(menu)
@@ -123,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         return super.onOptionsItemSelected(item)
     }
 
-    // Class Pengunduh & Pembuka Otomatis File PDF
+    // Class Download & Buka PDF Otomatis
     class BlobDownloader(private val context: Context) {
         @JavascriptInterface
         fun getBase64FromBlobData(base64Data: String, mimeType: String) {
@@ -143,7 +162,6 @@ class MainActivity : AppCompatActivity() {
                 (context as AppCompatActivity).runOnUiThread {
                     Toast.makeText(context, "PDF Berhasil Disimpan & Membuka PDF...", Toast.LENGTH_SHORT).show()
 
-                    // Buka file PDF secara otomatis
                     try {
                         val contentUri: Uri = FileProvider.getUriForFile(
                             context,
