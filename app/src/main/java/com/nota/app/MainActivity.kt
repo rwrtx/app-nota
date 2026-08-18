@@ -35,7 +35,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.loadUrl("https://nota.serviceacjakarta.my.id/")
+        webView.loadUrl("https://serviceacjakarta.my.id/kasir/notairfani.html")
     }
 
     override fun onBackPressed() {
