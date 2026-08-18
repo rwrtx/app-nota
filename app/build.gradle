@@ -15,9 +15,20 @@ android {
         versionName "1.0"
     }
 
+    signingConfigs {
+        release {
+            // Menggunakan sertifikat resmi bawaan Android SDK untuk Release
+            storeFile file(android.buildTypes.release.signingConfig = debug.storeFile)
+            storePassword debug.storePassword
+            keyAlias debug.keyAlias
+            keyPassword debug.keyPassword
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
+            signingConfig signingConfigs.release
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
