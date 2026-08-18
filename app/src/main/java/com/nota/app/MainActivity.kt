@@ -7,15 +7,17 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.util.Base64
+import android.view.Menu
+import android.view.MenuItem
 import android.webkit.JavascriptInterface
 import android.webkit.URLUtil
-import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStream
@@ -23,14 +25,20 @@ import java.io.OutputStream
 class MainActivity : AppCompatActivity() {
 
     private lateinit var webView: WebView
+    private lateinit var swipeRefreshLayout: SwipeRefreshLayout
 
     @SuppressLint("SetJavaScriptEnabled", "JavascriptInterface")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Membuat tata letak utama dengan SwipeRefreshLayout
+        swipeRefreshLayout = SwipeRefreshLayout(this)
         webView = WebView(this)
-        setContentView(webView)
 
+        swipeRefreshLayout.addView(webView)
+        setContentView(swipeRefreshLayout)
+
+        // Konfigurasi WebSettings
         val webSettings: WebSettings = webView.settings
         webSettings.javaScriptEnabled = true
         webSettings.domStorageEnabled = true
@@ -39,7 +47,14 @@ class MainActivity : AppCompatActivity() {
         webSettings.useWideViewPort = true
         webSettings.loadWithOverviewMode = true
 
+        // Mengatur perilaku WebView
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageFinished(view: WebView?, url: String?) {
+                super.onPageFinished(view, url)
+                // Hentikan animasi putar refresh saat halaman selesai dimuat
+                swipeRefreshLayout.isRefreshing = false
+            }
+
             override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
                 if (url != null) {
                     view?.loadUrl(url)
@@ -50,13 +65,17 @@ class MainActivity : AppCompatActivity() {
 
         webView.webChromeClient = WebChromeClient()
 
-        // Menambahkan antarmuka JavaScript untuk menangani Blob PDF
+        // Fitur Swipe to Refresh
+        swipeRefreshLayout.setOnRefreshListener {
+            webView.reload()
+        }
+
+        // Menambahkan Interface Penanganan Unduhan PDF Blob
         webView.addJavascriptInterface(BlobDownloader(this), "AndroidBlobDownloader")
 
-        // Menangkap event unduhan dari WebView
-        webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, contentLength ->
+        // Penanganan Unduhan File PDF
+        webView.setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
             if (url.startsWith("blob:")) {
-                // Menangani Blob URL buatan jsPDF
                 val js = """
                     (function() {
                         var xhr = new XMLHttpRequest();
@@ -78,7 +97,6 @@ class MainActivity : AppCompatActivity() {
                 """.trimIndent()
                 webView.evaluateJavascript(js, null)
             } else {
-                // Menangani unduhan URL HTTPS standar
                 val request = DownloadManager.Request(Uri.parse(url))
                 val fileName = URLUtil.guessFileName(url, contentDisposition, mimetype)
                 request.setMimeType(mimetype)
@@ -93,10 +111,25 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.loadUrl("https://serviceacjakarta.my.id/irfannota/notairfani.html")
+        webView.loadUrl("https://nota.serviceacjakarta.my.id/")
     }
 
-    // Class pembantu untuk mengonversi Blob Base64 ke File PDF fisik di folder Download
+    // Menambahkan Tombol Refresh pada Menu Atas (Opsional)
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menu?.add(0, 1, 0, "Refresh")?.setIcon(android.R.drawable.ic_menu_rotate)?.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS)
+        return super.onCreateOptionsMenu(menu)
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (item.itemId == 1) {
+            swipeRefreshLayout.isRefreshing = true
+            webView.reload()
+            return true
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
+    // Class Pengunduh Blob PDF
     class BlobDownloader(private val context: Context) {
         @JavascriptInterface
         fun getBase64FromBlobData(base64Data: String, mimeType: String) {
