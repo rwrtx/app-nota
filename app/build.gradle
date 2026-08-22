@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.nota.app'
+    namespace 'com.panel.app'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.nota.app"
+        applicationId "com.panel.app"
         minSdk 21
         targetSdk 34
         versionCode 1
