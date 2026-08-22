@@ -124,7 +124,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        webView.loadUrl("https://serviceacjakarta.my.id/kasir/index.html")
+        webView.loadUrl("https://status.serviceacjakarta.my.id")
     }
 
     // Tombol Refresh di Menu Atas
